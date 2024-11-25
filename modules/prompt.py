@@ -47,7 +47,7 @@ class EmotionDeepPrompt(nn.Module):
         return s_trg[:,0,:], s_trg[:,1:,:]
 
 from sync_batchnorm import SynchronizedBatchNorm2d as BatchNorm2d
-from Utils.JDC.model import JDCNet
+from modules.Utils.JDC.model import JDCNet
 from modules.util import mydownres2Dblock
 from modules.transformer import TransformerST, PositionalEncoding
 

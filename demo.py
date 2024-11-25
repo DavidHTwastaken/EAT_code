@@ -26,6 +26,8 @@ emo_label = ['ang',  'con',  'dis',  'fea',  'hap',  'neu',  'sad',  'sur']
 emo_label_full = ['angry',  'contempt',  'disgusted',  'fear',  'happy',  'neutral',  'sad',  'surprised']
 latent_dim = 16
 
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 MEL_PARAMS_25 = {
     "n_mels": 80,
     "n_fft": 2048,
@@ -101,7 +103,8 @@ def prepare_test_data(img_path, audio_path, opt, emotype, use_otherimg=True):
         source_latent = np.load(img_path.replace('images', 'latent')[:-9]+'.npy', allow_pickle=True)
     he_source = {}
     for k in source_latent[1].keys():
-        he_source[k] = torch.from_numpy(source_latent[1][k][0]).unsqueeze(0).cuda()
+        he_source[k] = torch.from_numpy(
+            source_latent[1][k][0]).unsqueeze(0).to(DEVICE)
     
     # source images
     source_img = img_as_float32(io.imread(img_path)).transpose((2, 0, 1))
@@ -270,7 +273,7 @@ def load_checkpoints_extractor(config_path, checkpoint_path, cpu=False):
 def estimate_latent(driving_video, kp_detector, he_estimator):
     with torch.no_grad():
         predictions = []
-        driving = torch.tensor(np.array(driving_video)[np.newaxis].astype(np.float32)).permute(0, 4, 1, 2, 3).cuda()
+        driving = torch.tensor(np.array(driving_video)[np.newaxis].astype(np.float32)).permute(0, 4, 1, 2, 3).to(DEVICE)
         kp_canonical = kp_detector(driving[:, :, 0])
         he_drivings = {'yaw': [], 'pitch': [], 'roll': [], 't': [], 'exp': []}
 
@@ -340,20 +343,20 @@ def test(ckpt, emotype, save_dir=" "):
 
 
             with torch.no_grad():
-                source_img = torch.from_numpy(source_img).unsqueeze(0).cuda()
+                source_img = torch.from_numpy(source_img).unsqueeze(0).to(DEVICE)
                 kp_canonical = kp_detector(source_img, with_feature=True)     # {'value': value, 'jacobian': jacobian}   
                 kp_cano = kp_canonical['value']
 
                 x = {}
-                x['mel'] = audio_frames.unsqueeze(1).unsqueeze(0).cuda()
-                x['z_trg'] = z_trg.unsqueeze(0).cuda()
-                x['y_trg'] = torch.tensor(y_trg, dtype=torch.long).cuda().reshape(1)
-                x['pose'] = poseimgs.cuda()
-                x['deep'] = deep_feature.cuda().unsqueeze(0)
-                x['he_driving'] = {'yaw': torch.from_numpy(he_driving['yaw']).cuda().unsqueeze(0), 
-                                'pitch': torch.from_numpy(he_driving['pitch']).cuda().unsqueeze(0), 
-                                'roll': torch.from_numpy(he_driving['roll']).cuda().unsqueeze(0), 
-                                't': torch.from_numpy(he_driving['t']).cuda().unsqueeze(0), 
+                x['mel'] = audio_frames.unsqueeze(1).unsqueeze(0).to(DEVICE)
+                x['z_trg'] = z_trg.unsqueeze(0).to(DEVICE)
+                x['y_trg'] = torch.tensor(y_trg, dtype=torch.long).to(DEVICE).reshape(1)
+                x['pose'] = poseimgs.to(DEVICE)
+                x['deep'] = deep_feature.to(DEVICE).unsqueeze(0)
+                x['he_driving'] = {'yaw': torch.from_numpy(he_driving['yaw']).to(DEVICE).unsqueeze(0), 
+                                'pitch': torch.from_numpy(he_driving['pitch']).to(DEVICE).unsqueeze(0), 
+                                'roll': torch.from_numpy(he_driving['roll']).to(DEVICE).unsqueeze(0), 
+                                't': torch.from_numpy(he_driving['t']).to(DEVICE).unsqueeze(0), 
                                 }
                 
                 ### emotion prompt
@@ -407,7 +410,7 @@ def test(ckpt, emotype, save_dir=" "):
                     emo_exps = torch.cat(emo_exps, dim=0).reshape(-1, 45)
 
                 exp = he_driving_emo['emo']
-                device = exp.get_device()
+                device = exp.device
                 exp = torch.mm(exp, expU.t().to(device))
                 exp = exp + expmean.expand_as(exp).to(device)
                 exp = exp + emo_exps
@@ -416,12 +419,12 @@ def test(ckpt, emotype, save_dir=" "):
                 source_area = ConvexHull(kp_cano[0].cpu().numpy()).volume
                 exp = exp * source_area
 
-                he_new_driving = {'yaw': torch.from_numpy(he_driving['yaw']).cuda(), 
-                                'pitch': torch.from_numpy(he_driving['pitch']).cuda(), 
-                                'roll': torch.from_numpy(he_driving['roll']).cuda(), 
-                                't': torch.from_numpy(he_driving['t']).cuda(), 
+                he_new_driving = {'yaw': torch.from_numpy(he_driving['yaw']).to(DEVICE), 
+                                'pitch': torch.from_numpy(he_driving['pitch']).to(DEVICE), 
+                                'roll': torch.from_numpy(he_driving['roll']).to(DEVICE), 
+                                't': torch.from_numpy(he_driving['t']).to(DEVICE), 
                                 'exp': exp}
-                he_driving['exp'] = torch.from_numpy(he_driving['exp']).cuda()
+                he_driving['exp'] = torch.from_numpy(he_driving['exp']).to(DEVICE)
 
                 kp_source = keypoint_transformation(kp_canonical, he_source, False)
                 mean_source = torch.mean(kp_source['value'], dim=1)[0]

@@ -6,7 +6,7 @@ from modules.util import AntiAliasInterpolation2d, make_coordinate_grid
 from sync_batchnorm import SynchronizedBatchNorm2d as BatchNorm2d
 import torch.nn.functional as F
 import copy
-
+import os
 
 class PositionalEncoding(nn.Module):
 
@@ -467,7 +467,7 @@ class TransformerDecoderLayer(nn.Module):
         return self.forward_post(tgt, memory, tgt_mask, memory_mask,
                                  tgt_key_padding_mask, memory_key_padding_mask, pos, query_pos)
 
-from Utils.JDC.model import JDCNet
+from modules.Utils.JDC.model import JDCNet
 from modules.audioencoder import AudioEncoder, MappingNetwork, StyleEncoder, AdaIN, EAModule
 
 def headpose_pred_to_degree(pred):
@@ -753,7 +753,7 @@ class Audio2kpTransformerBBoxQDeepPrompt(nn.Module):
         self.transformer = TransformerDeep()
         self.kp = nn.Linear(128, 32)
 
-        F0_path = './Utils/JDC/bst.t7'
+        F0_path = os.path.join(os.path.dirname(__file__), './Utils/JDC/bst.t7')
         F0_model = JDCNet(num_class=1, seq_len=32)
         params = torch.load(F0_path, map_location='cpu')['net']
         F0_model.load_state_dict(params)
