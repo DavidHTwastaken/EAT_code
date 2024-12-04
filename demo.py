@@ -234,12 +234,11 @@ def preprocess_imgs(allimgs, tmp_allimgs_cropped):
         if os.path.basename(path) in name_cropped:
             continue
         else:
-            out_path = path.replace('imgs/', 'imgs_cropped/')
+            out_path = path.replace('imgs', 'imgs_cropped')
             crop_image(path, out_path)
 
 from sync_batchnorm import DataParallelWithCallback
 def load_checkpoints_extractor(config_path, checkpoint_path, cpu=False):
-
     with open(config_path) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
 
@@ -285,7 +284,7 @@ def estimate_latent(driving_video, kp_detector, he_estimator):
     return [kp_canonical, he_drivings]
 
 def extract_keypoints(extract_list):
-    kp_detector, he_estimator = load_checkpoints_extractor(config_path='config/vox-256-spade.yaml', checkpoint_path='./ckpt/pretrain_new_274.pth.tar')
+    kp_detector, he_estimator = load_checkpoints_extractor(config_path='config/vox-256-spade.yaml', checkpoint_path='./ckpt/pretrain_new_274.pth.tar', cpu=DEVICE.type=='cpu')
     if not os.path.exists('./demo/imgs_latent/'):
         os.makedirs('./demo/imgs_latent/')
     for imgname in tqdm(extract_list):
@@ -454,12 +453,177 @@ def test(ckpt, emotype, save_dir=" "):
             os.system(cmd)
             os.remove(video_path)
 
+
+def test_one(ckpt, emotype, file: str, cropped=False, save_dir=" "):
+    # with open("config/vox-transformer2.yaml") as f:
+    with open("config/deepprompt_eam3d_st_tanh_304_3090_all.yaml") as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
+    cur_path = os.getcwd()
+    generator, kp_detector, audio2kptransformer, sidetuning, emotionprompt = build_model(
+        config)
+    load_ckpt(ckpt, kp_detector=kp_detector, generator=generator,
+              audio2kptransformer=audio2kptransformer, sidetuning=sidetuning, emotionprompt=emotionprompt)
+
+    audio2kptransformer.eval()
+    generator.eval()
+    kp_detector.eval()
+    sidetuning.eval()
+    emotionprompt.eval()
+
+    all_wavs2 = [f'{root_wav}/{os.path.basename(root_wav)}.wav']
+    tmp_allimg_cropped = glob.glob('./demo/imgs_cropped/*.jpg')
+    img = os.path.join(os.path.normpath(f'./demo/imgs'), file + '.jpg' if not file.endswith('.jpg') else '')
+    cropped_img = os.path.join(os.path.normpath(f'./demo/imgs_cropped'), file + '.jpg' if not file.endswith('.jpg') else '')
+    
+    preprocess_imgs([img], tmp_allimg_cropped)  # crop and align images
+    # extract latent keypoints if necessary
+    preprocess_cropped_imgs([cropped_img])
+
+    for ind in tqdm(range(len(all_wavs2))):
+        img_path = cropped_img
+        audio_path = all_wavs2[ind]
+        # read in data
+        audio_frames, poseimgs, deep_feature, source_img, he_source, he_driving, num_frames, y_trg, z_trg, latent_path_driving = prepare_test_data(
+            img_path, audio_path, config['model_params']['audio2kp_params'], emotype)
+
+        with torch.no_grad():
+            source_img = torch.from_numpy(
+                source_img).unsqueeze(0).to(DEVICE)
+            # {'value': value, 'jacobian': jacobian}
+            kp_canonical = kp_detector(source_img, with_feature=True)
+            kp_cano = kp_canonical['value']
+
+            x = {}
+            x['mel'] = audio_frames.unsqueeze(1).unsqueeze(0).to(DEVICE)
+            x['z_trg'] = z_trg.unsqueeze(0).to(DEVICE)
+            x['y_trg'] = torch.tensor(
+                y_trg, dtype=torch.long).to(DEVICE).reshape(1)
+            x['pose'] = poseimgs.to(DEVICE)
+            x['deep'] = deep_feature.to(DEVICE).unsqueeze(0)
+            x['he_driving'] = {'yaw': torch.from_numpy(he_driving['yaw']).to(DEVICE).unsqueeze(0),
+                                'pitch': torch.from_numpy(he_driving['pitch']).to(DEVICE).unsqueeze(0),
+                                'roll': torch.from_numpy(he_driving['roll']).to(DEVICE).unsqueeze(0),
+                                't': torch.from_numpy(he_driving['t']).to(DEVICE).unsqueeze(0),
+                                }
+
+            # emotion prompt
+            emoprompt, deepprompt = emotionprompt(x)
+            a2kp_exps = []
+            emo_exps = []
+            T = 5
+            if T == 1:
+                for i in range(x['mel'].shape[1]):
+                    xi = {}
+                    xi['mel'] = x['mel'][:, i, :, :, :].unsqueeze(1)
+                    xi['z_trg'] = x['z_trg']
+                    xi['y_trg'] = x['y_trg']
+                    xi['pose'] = x['pose'][i, :, :, :, :].unsqueeze(0)
+                    xi['deep'] = x['deep'][:, i, :, :, :].unsqueeze(1)
+                    xi['he_driving'] = {'yaw': x['he_driving']['yaw'][:, i, :].unsqueeze(0),
+                                        'pitch': x['he_driving']['pitch'][:, i, :].unsqueeze(0),
+                                        'roll': x['he_driving']['roll'][:, i, :].unsqueeze(0),
+                                        't': x['he_driving']['t'][:, i, :].unsqueeze(0),
+                                        }
+                    # {'yaw': yaw, 'pitch': pitch, 'roll': roll, 't': t, 'exp': exp}
+                    he_driving_emo_xi, input_st_xi = audio2kptransformer(
+                        xi, kp_canonical, emoprompt=emoprompt, deepprompt=deepprompt, side=True)
+                    emo_exp = sidetuning(
+                        input_st_xi, emoprompt, deepprompt)
+                    a2kp_exps.append(he_driving_emo_xi['emo'])
+                    emo_exps.append(emo_exp)
+            elif T is not None:
+                for i in range(x['mel'].shape[1]//T+1):
+                    if i*T >= x['mel'].shape[1]:
+                        break
+                    xi = {}
+                    xi['mel'] = x['mel'][:, i*T:(i+1)*T, :, :, :]
+                    xi['z_trg'] = x['z_trg']
+                    xi['y_trg'] = x['y_trg']
+                    xi['pose'] = x['pose'][i*T:(i+1)*T, :, :, :, :]
+                    xi['deep'] = x['deep'][:, i*T:(i+1)*T, :, :, :]
+                    xi['he_driving'] = {'yaw': x['he_driving']['yaw'][:, i*T:(i+1)*T, :],
+                                        'pitch': x['he_driving']['pitch'][:, i*T:(i+1)*T, :],
+                                        'roll': x['he_driving']['roll'][:, i*T:(i+1)*T, :],
+                                        't': x['he_driving']['t'][:, i*T:(i+1)*T, :],
+                                        }
+                    # {'yaw': yaw, 'pitch': pitch, 'roll': roll, 't': t, 'exp': exp}
+                    he_driving_emo_xi, input_st_xi = audio2kptransformer(
+                        xi, kp_canonical, emoprompt=emoprompt, deepprompt=deepprompt, side=True)
+                    emo_exp = sidetuning(
+                        input_st_xi, emoprompt, deepprompt)
+                    a2kp_exps.append(he_driving_emo_xi['emo'])
+                    emo_exps.append(emo_exp)
+
+            if T is None:
+                # {'yaw': yaw, 'pitch': pitch, 'roll': roll, 't': t, 'exp': exp}
+                he_driving_emo, input_st = audio2kptransformer(
+                    x, kp_canonical, emoprompt=emoprompt, deepprompt=deepprompt, side=True)
+                emo_exps = sidetuning(
+                    input_st, emoprompt, deepprompt).reshape(-1, 45)
+            else:
+                he_driving_emo = {}
+                he_driving_emo['emo'] = torch.cat(a2kp_exps, dim=0)
+                emo_exps = torch.cat(emo_exps, dim=0).reshape(-1, 45)
+
+            exp = he_driving_emo['emo']
+            device = exp.device
+            exp = torch.mm(exp, expU.t().to(device))
+            exp = exp + expmean.expand_as(exp).to(device)
+            exp = exp + emo_exps
+
+            source_area = ConvexHull(kp_cano[0].cpu().numpy()).volume
+            exp = exp * source_area
+
+            he_new_driving = {'yaw': torch.from_numpy(he_driving['yaw']).to(DEVICE),
+                                'pitch': torch.from_numpy(he_driving['pitch']).to(DEVICE),
+                                'roll': torch.from_numpy(he_driving['roll']).to(DEVICE),
+                                't': torch.from_numpy(he_driving['t']).to(DEVICE),
+                                'exp': exp}
+            he_driving['exp'] = torch.from_numpy(
+                he_driving['exp']).to(DEVICE)
+
+            kp_source = keypoint_transformation(
+                kp_canonical, he_source, False)
+            mean_source = torch.mean(kp_source['value'], dim=1)[0]
+            kp_driving = keypoint_transformation(
+                kp_canonical, he_new_driving, False)
+            mean_driving = torch.mean(torch.mean(
+                kp_driving['value'], dim=1), dim=0)
+            kp_driving['value'] = kp_driving['value'] + \
+                (mean_source-mean_driving).unsqueeze(0).unsqueeze(0)
+            bs = kp_source['value'].shape[0]
+            predictions_gen = []
+            for i in tqdm(range(num_frames)):
+                kp_si = {}
+                kp_si['value'] = kp_source['value'][0].unsqueeze(0)
+                kp_di = {}
+                kp_di['value'] = kp_driving['value'][i].unsqueeze(0)
+                generated = generator(
+                    source_img, kp_source=kp_si, kp_driving=kp_di, prompt=emoprompt)
+                predictions_gen.append(
+                    (np.transpose(generated['prediction'].data.cpu().numpy(), [0, 2, 3, 1])[0] * 255).astype(np.uint8))
+
+            log_dir = save_dir
+            os.makedirs(os.path.join(log_dir, "temp"), exist_ok=True)
+
+            f_name = os.path.basename(
+                img_path[:-4]) + "_" + emotype + "_" + os.path.basename(latent_path_driving)[:-4] + ".mp4"
+            video_path = os.path.join(log_dir, "temp", f_name)
+            imageio.mimsave(video_path, predictions_gen, fps=25.0)
+
+            save_video = os.path.join(log_dir, f_name)
+            cmd = r'ffmpeg -loglevel error -y -i "%s" -i "%s" -vcodec copy -shortest "%s"' % (
+                video_path, audio_path, save_video)
+            os.system(cmd)
+            os.remove(video_path)
+
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
     argparser.add_argument("--save_dir", type=str, default=" ", help="path of the output video")
     argparser.add_argument("--name", type=str, default="deepprompt_eam3d_all_final_313", help="path of the output video")
     argparser.add_argument("--emo", type=str, default="hap", help="emotion type ('ang',  'con',  'dis',  'fea',  'hap',  'neu',  'sad',  'sur')")
     argparser.add_argument("--root_wav", type=str, default='./demo/video_processed/M003_neu_1_001', help="emotion type ('ang',  'con',  'dis',  'fea',  'hap',  'neu',  'sad',  'sur')")
+    argparser.add_argument("--file", type=str, default="", help="single file to process (just filename, directory is assumed to be ./demo/imgs)")
     args = argparser.parse_args()
 
     root_wav=args.root_wav
@@ -467,5 +631,8 @@ if __name__ == '__main__':
     if len(args.name) > 1:
         name = args.name
         print(name)
-    test(f'./ckpt/{name}.pth.tar', args.emo, save_dir=f'./demo/output/{name}/')
+    if args.file:
+        test_one(f'./ckpt/{name}.pth.tar', args.emo, args.file, save_dir=f'./demo/output/{name}/')
+    else:
+        test(f'./ckpt/{name}.pth.tar', args.emo, save_dir=f'./demo/output/{name}/')
     
