@@ -13,10 +13,12 @@ sys.path.append('../')
 from modules.util import AntiAliasInterpolation2d
 import gzip
 
-down_pose = AntiAliasInterpolation2d(1,0.25).cuda()
+DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+down_pose = AntiAliasInterpolation2d(1,0.25).to(DEVICE)
 
 def headpose_pred_to_degree(pred):
-    pred = torch.from_numpy(pred).cuda()
+    pred = torch.from_numpy(pred).to(DEVICE)
     device = pred.device
     idx_tensor = [idx for idx in range(66)]
     idx_tensor = torch.FloatTensor(idx_tensor).to(device)
@@ -111,7 +113,7 @@ def get_pose_img(he_driving):
         draw_annotation_box(img, ri, ti)
         poseimgs.append(img)
     poseimgs = torch.from_numpy(np.array(poseimgs))
-    down_poseimgs = down_pose(poseimgs.unsqueeze(1).cuda().to(torch.float))
+    down_poseimgs = down_pose(poseimgs.unsqueeze(1).to(DEVICE).to(torch.float))
     return down_poseimgs
 
 

@@ -623,7 +623,7 @@ if __name__ == '__main__':
     argparser.add_argument("--name", type=str, default="deepprompt_eam3d_all_final_313", help="path of the output video")
     argparser.add_argument("--emo", type=str, default="hap", help="emotion type ('ang',  'con',  'dis',  'fea',  'hap',  'neu',  'sad',  'sur')")
     argparser.add_argument("--root_wav", type=str, default='./demo/video_processed/M003_neu_1_001', help="emotion type ('ang',  'con',  'dis',  'fea',  'hap',  'neu',  'sad',  'sur')")
-    argparser.add_argument("--file", type=str, default="", help="single file to process (just filename, directory is assumed to be ./demo/imgs)")
+    argparser.add_argument("--src_img", type=str, default="", help="single file to process (just filename, directory is assumed to be ./demo/imgs)")
     args = argparser.parse_args()
 
     root_wav=args.root_wav
@@ -631,8 +631,8 @@ if __name__ == '__main__':
     if len(args.name) > 1:
         name = args.name
         print(name)
-    if args.file:
-        test_one(f'./ckpt/{name}.pth.tar', args.emo, args.file, save_dir=f'./demo/output/{name}/')
+    if args.src_img:
+        test_one(f'./ckpt/{name}.pth.tar', args.emo, args.src_img, save_dir=f'./demo/output/{name}/')
     else:
         test(f'./ckpt/{name}.pth.tar', args.emo, save_dir=f'./demo/output/{name}/')
     

@@ -17,6 +17,7 @@ from scipy.spatial import ConvexHull
 import glob
 import time
 
+DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 if sys.version_info[0] < 3:
     raise Exception("You must use Python 3 or higher. Recommended version is Python 3.7")
@@ -29,12 +30,12 @@ def load_checkpoints(config_path, checkpoint_path, cpu=False):
     kp_detector = KPDetector(**config['model_params']['kp_detector_params'],
                              **config['model_params']['common_params'])
     if not cpu:
-        kp_detector.cuda()
+        kp_detector.to(DEVICE)
 
     he_estimator = HEEstimator(**config['model_params']['he_estimator_params'],
                                **config['model_params']['common_params'])
     if not cpu:
-        he_estimator.cuda()
+        he_estimator.to(DEVICE)
     
     if cpu:
         checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
@@ -56,7 +57,7 @@ def load_checkpoints(config_path, checkpoint_path, cpu=False):
 def estimate_latent(driving_video, kp_detector, he_estimator):
     with torch.no_grad():
         predictions = []
-        driving = torch.tensor(np.array(driving_video)[np.newaxis].astype(np.float32)).permute(0, 4, 1, 2, 3).cuda()
+        driving = torch.tensor(np.array(driving_video)[np.newaxis].astype(np.float32)).permute(0, 4, 1, 2, 3).to(DEVICE)
         kp_canonical = kp_detector(driving[:, :, 0])
         he_drivings = {'yaw': [], 'pitch': [], 'roll': [], 't': [], 'exp': []}
 
@@ -79,7 +80,7 @@ if __name__ == "__main__":
     part = opt.part
     trainlist = glob.glob('./imgs/*')
     trainlist.sort()
-    kp_detector, he_estimator = load_checkpoints(config_path=opt.config, checkpoint_path=opt.checkpoint)
+    kp_detector, he_estimator = load_checkpoints(config_path=opt.config, checkpoint_path=opt.checkpoint, cpu=torch.cuda.is_available()==False)
     if not os.path.exists('./latents/'):
         os.makedirs('./latents')
     #     os.makedirs('./output/latent_evp/test/')

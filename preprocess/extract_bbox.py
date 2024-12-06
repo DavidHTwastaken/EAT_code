@@ -9,7 +9,7 @@ import torch
 
 import face_detection
 
-fa = face_detection.FaceAlignment(face_detection.LandmarksType._2D, flip_input=False, device='cuda')
+fa = face_detection.FaceAlignment(face_detection.LandmarksType._2D, flip_input=False, device='cuda' if torch.cuda.is_available() else 'cpu')
 
 def detect_bbox(img_names):
     bboxs = []

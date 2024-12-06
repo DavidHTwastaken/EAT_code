@@ -1,4 +1,7 @@
 demo/*
 ckpt/*
 modules/Utils/*
-preprocess/video/*
+
+# __pycache__ folders
+__pycache__/*
+**/__pycache__/*
