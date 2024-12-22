@@ -132,6 +132,8 @@ def main(args):
             except:
                 print(outpath)
         kp_cano, he_driving = np.load(lat, allow_pickle=True)
+        # he_driving = {'yaw': np.array(136,66), 'pitch': np.array(136,66), 
+        # 'roll': np.array(136,66), 't': np.array(136,3), 'exp': np.array(136, 45)}
         poseimgs = get_pose_img(he_driving)
         f = gzip.GzipFile(f'{outpath}', "w")
         np.save(file=f, arr=poseimgs.cpu().numpy())

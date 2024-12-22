@@ -7,6 +7,7 @@ from modules.audioencoder import MappingNetwork, AudioEncoder, MappingDeepNetwor
 class EmotionPrompt(nn.Module):
     def __init__(self):
         super(EmotionPrompt, self).__init__()
+        # num_domains = 8 for number of emotion types
         self.mappingnet = MappingNetwork(latent_dim=16, style_dim=128, num_domains=8, hidden_dim=512)
     
     def forward(self,x):

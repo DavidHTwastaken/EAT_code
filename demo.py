@@ -510,7 +510,7 @@ def test_one(ckpt, emotype, file: str, cropped=False, save_dir=" "):
             emoprompt, deepprompt = emotionprompt(x)
             a2kp_exps = []
             emo_exps = []
-            T = 5
+            T = 5 # comes from config (num_w in audio2kp_params)
             if T == 1:
                 for i in range(x['mel'].shape[1]):
                     xi = {}
@@ -532,7 +532,7 @@ def test_one(ckpt, emotype, file: str, cropped=False, save_dir=" "):
                     a2kp_exps.append(he_driving_emo_xi['emo'])
                     emo_exps.append(emo_exp)
             elif T is not None:
-                for i in range(x['mel'].shape[1]//T+1):
+                for i in range(x['mel'].shape[1]//T+1): # loop based on length of audio
                     if i*T >= x['mel'].shape[1]:
                         break
                     xi = {}
