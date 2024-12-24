@@ -24,7 +24,7 @@ import gzip
 
 emo_label = ['ang',  'con',  'dis',  'fea',  'hap',  'neu',  'sad',  'sur']
 emo_label_full = ['angry',  'contempt',  'disgusted',  'fear',  'happy',  'neutral',  'sad',  'surprised']
-latent_dim = 16
+latent_dim = 16 # z is element of U^16 in the paper
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -112,7 +112,7 @@ def prepare_test_data(img_path, audio_path, opt, emotype, use_otherimg=True):
     
     # latent code
     y_trg = emo_label.index(emotype)
-    z_trg = torch.randn(latent_dim)
+    z_trg = torch.randn(latent_dim) # sampling latent code from normal distribution
     
     # driving latent
     latent_path_driving = f'{root_wav}/latent_evp_25/{asp}.npy'

@@ -18,6 +18,7 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 down_pose = AntiAliasInterpolation2d(1,0.25).to(DEVICE)
 
 def headpose_pred_to_degree(pred):
+    # pred is np.array(136, 66)
     pred = torch.from_numpy(pred).to(DEVICE)
     device = pred.device
     idx_tensor = [idx for idx in range(66)]
@@ -111,6 +112,9 @@ def get_pose_img(he_driving):
         ti = t[i]
         img = np.zeros([256, 256])
         draw_annotation_box(img, ri, ti)
+        # show image to user
+        cv2.imshow('image', img)
+        cv2.waitKey(0)
         poseimgs.append(img)
     poseimgs = torch.from_numpy(np.array(poseimgs))
     down_poseimgs = down_pose(poseimgs.unsqueeze(1).to(DEVICE).to(torch.float))

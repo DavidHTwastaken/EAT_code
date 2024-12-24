@@ -40,9 +40,8 @@ class EmotionDeepPrompt(nn.Module):
         self.style_dim=128
     
     def forward(self,x):
-
-        z_trg = x['z_trg']
-        y_org = x['y_trg']
+        z_trg: torch.Tensor = x['z_trg'] # (16, )
+        y_org: torch.Tensor = x['y_trg'] # (1, )
         bs = y_org.shape[0]
         s_trg = self.mappingnet(z_trg, y_org).reshape(bs, -1, 128)
         return s_trg[:,0,:], s_trg[:,1:,:]
