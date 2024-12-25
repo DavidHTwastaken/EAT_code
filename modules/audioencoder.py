@@ -321,7 +321,7 @@ class MappingDeepNetwork(nn.Module):
                                             nn.ReLU(),
                                             nn.Linear(hidden_dim, hidden_dim),
                                             nn.ReLU(),
-                                            nn.Linear(hidden_dim, style_dim*7))]
+                                            nn.Linear(hidden_dim, style_dim*7))] # multiply by 7 so result can be reshaped to (batch, 7, style_dim)
 
     def forward(self, z, y):
         h = self.shared(z)

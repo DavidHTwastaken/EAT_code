@@ -495,9 +495,9 @@ def test_one(ckpt, emotype, file: str, cropped=False, save_dir=" "):
 
             x = {}
             x['mel'] = audio_frames.unsqueeze(1).unsqueeze(0).to(DEVICE)
-            x['z_trg'] = z_trg.unsqueeze(0).to(DEVICE)
+            x['z_trg'] = z_trg.unsqueeze(0).to(DEVICE) # (1, 16)
             x['y_trg'] = torch.tensor(
-                y_trg, dtype=torch.long).to(DEVICE).reshape(1)
+                y_trg, dtype=torch.long).to(DEVICE).reshape(1) # (1, )
             x['pose'] = poseimgs.to(DEVICE)
             x['deep'] = deep_feature.to(DEVICE).unsqueeze(0)
             x['he_driving'] = {'yaw': torch.from_numpy(he_driving['yaw']).to(DEVICE).unsqueeze(0),
