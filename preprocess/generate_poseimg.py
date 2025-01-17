@@ -113,8 +113,8 @@ def get_pose_img(he_driving):
         img = np.zeros([256, 256])
         draw_annotation_box(img, ri, ti)
         # show image to user
-        cv2.imshow('image', img)
-        cv2.waitKey(0)
+        # cv2.imshow('image', img)
+        # cv2.waitKey(0)
         poseimgs.append(img)
     poseimgs = torch.from_numpy(np.array(poseimgs))
     down_poseimgs = down_pose(poseimgs.unsqueeze(1).to(DEVICE).to(torch.float))

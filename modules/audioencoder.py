@@ -11,6 +11,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from modules.util import interpolate_vector
+
+emo_label = ['ang',  'con',  'dis',  'fea',  'hap',  'neu',  'sad',  'sur']
 
 class DownSample(nn.Module):
     def __init__(self, layer_type):
@@ -323,14 +326,21 @@ class MappingDeepNetwork(nn.Module):
                                             nn.ReLU(),
                                             nn.Linear(hidden_dim, style_dim*7))] # multiply by 7 so result can be reshaped to (batch, 7, style_dim)
 
-    def forward(self, z, y):
+    def forward(self, z, y, intensity=None):
         h = self.shared(z)
         out = []
         for layer in self.unshared:
             out += [layer(h)] # one output for each domain
         out = torch.stack(out, dim=1)  # (batch, num_domains, style_dim)
-        idx = torch.LongTensor(range(y.size(0))).to(y.device)
+
+        # in case y has batch dimension; idx will be a tensor containing each batch index, so just 0 if y is 1D
+        idx = torch.LongTensor(range(y.size(0))).to(y.device) 
         s = out[idx, y]  # (batch, style_dim)
+        
+        if intensity is not None:
+            assert (0 <= intensity <= 1)
+            n = out[idx, emo_label.index("neu")]
+            s = interpolate_vector(n, s, intensity)
         return s
 
 

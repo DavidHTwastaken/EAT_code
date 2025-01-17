@@ -312,7 +312,7 @@ def preprocess_cropped_imgs(allimgs_cropped):
         print('=========', "Extract latent keypoints from New image", '======')
         extract_keypoints(extract_list)
 
-def test(ckpt, emotype, save_dir=" "):
+def test(ckpt, emotype, save_dir=" ", intensity=None):
     # with open("config/vox-transformer2.yaml") as f:
     with open("config/deepprompt_eam3d_st_tanh_304_3090_all.yaml") as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
@@ -357,6 +357,7 @@ def test(ckpt, emotype, save_dir=" "):
                                 'roll': torch.from_numpy(he_driving['roll']).to(DEVICE).unsqueeze(0), 
                                 't': torch.from_numpy(he_driving['t']).to(DEVICE).unsqueeze(0), 
                                 }
+                x['intensity'] = intensity
                 
                 ### emotion prompt
                 emoprompt, deepprompt = emotionprompt(x)
@@ -454,7 +455,7 @@ def test(ckpt, emotype, save_dir=" "):
             os.remove(video_path)
 
 
-def test_one(ckpt, emotype, file: str, cropped=False, save_dir=" "):
+def test_one(ckpt, emotype, file: str, cropped=False, save_dir=" ", intensity=None):
     # with open("config/vox-transformer2.yaml") as f:
     with open("config/deepprompt_eam3d_st_tanh_304_3090_all.yaml") as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
@@ -505,6 +506,7 @@ def test_one(ckpt, emotype, file: str, cropped=False, save_dir=" "):
                                 'roll': torch.from_numpy(he_driving['roll']).to(DEVICE).unsqueeze(0),
                                 't': torch.from_numpy(he_driving['t']).to(DEVICE).unsqueeze(0),
                                 }
+            x['intensity'] = None
 
             # emotion prompt
             emoprompt, deepprompt = emotionprompt(x)
@@ -607,7 +609,7 @@ def test_one(ckpt, emotype, file: str, cropped=False, save_dir=" "):
             os.makedirs(os.path.join(log_dir, "temp"), exist_ok=True)
 
             f_name = os.path.basename(
-                img_path[:-4]) + "_" + emotype + "_" + os.path.basename(latent_path_driving)[:-4] + ".mp4"
+                img_path[:-4]) + "_" + emotype + "_" + os.path.basename(latent_path_driving)[:-4] + f'{intensity:.3f if intensity is not None else ""}' + ".mp4"
             video_path = os.path.join(log_dir, "temp", f_name)
             imageio.mimsave(video_path, predictions_gen, fps=25.0)
 
@@ -624,6 +626,7 @@ if __name__ == '__main__':
     argparser.add_argument("--emo", type=str, default="hap", help="emotion type ('ang',  'con',  'dis',  'fea',  'hap',  'neu',  'sad',  'sur')")
     argparser.add_argument("--root_wav", type=str, default='./demo/video_processed/M003_neu_1_001', help="emotion type ('ang',  'con',  'dis',  'fea',  'hap',  'neu',  'sad',  'sur')")
     argparser.add_argument("--src_img", type=str, default="", help="single file to process (just filename, directory is assumed to be ./demo/imgs)")
+    argparser.add_argument("--intensity", type=float, default=None, help="Value in range [0,1]")
     args = argparser.parse_args()
 
     root_wav=args.root_wav
@@ -632,7 +635,7 @@ if __name__ == '__main__':
         name = args.name
         print(name)
     if args.src_img:
-        test_one(f'./ckpt/{name}.pth.tar', args.emo, args.src_img, save_dir=f'./demo/output/{name}/')
+        test_one(f'./ckpt/{name}.pth.tar', args.emo, args.src_img, save_dir=f'./demo/output/{name}/', intensity=args.intensity)
     else:
-        test(f'./ckpt/{name}.pth.tar', args.emo, save_dir=f'./demo/output/{name}/')
+        test(f'./ckpt/{name}.pth.tar', args.emo, save_dir=f'./demo/output/{name}/', intensity=args.intensity)
     

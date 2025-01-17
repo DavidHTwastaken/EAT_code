@@ -14,7 +14,14 @@ from modules.layers.residual import DownRes2dBlock
 def mydownres2Dblock(indim,outdim,k_size = 3,padding = 1, normalize = "batch",nonlinearity = "leakyrelu",order = "NACNAC"):
     return DownRes2dBlock(indim,outdim,k_size,padding=padding,activation_norm_type=normalize,nonlinearity=nonlinearity,inplace_nonlinearity=True,order = order)
 
+def interpolate_vector(v1: torch.Tensor, v2: torch.Tensor, d: float):
+    '''
+    Return a vector at distance d from v1 to v2 
 
+    d: must be in range [0,1]
+    '''
+    assert(0 <= d <= 1)
+    return v1 + (v2 - v1) * d
 
 def kp2gaussian(kp, spatial_size, kp_variance):
     """

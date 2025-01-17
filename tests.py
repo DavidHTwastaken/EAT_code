@@ -18,9 +18,20 @@ def test_emo_mapper(emotype: str):
     s_trg = mapper(z_trg, y_trg)
     print(s_trg.shape)
 
+def test_emo_prompt(emotype: str):
+    emotionprompt = prompt.EmotionPrompt()
+    y_trg = emo_label.index(emotype)
+    y_trg = torch.tensor(y_trg, dtype=torch.long).unsqueeze(0)
+    z_trg = torch.randn(latent_dim).unsqueeze(0)
+    print(y_trg.shape)
+    print(z_trg.shape)
+    print(z_trg)
+    s_trg = prompt({'z_trg': z_trg, 'y_trg': y_trg})
+    print(s_trg.shape)
+
 def main():
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('--emotype', type=str, default='neutral')
+    argparser.add_argument('--emotype', type=str, default='neu')
     args = argparser.parse_args()
     test_emo_mapper(args.emotype)
 
