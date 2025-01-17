@@ -1,6 +1,9 @@
 from modules import audioencoder, prompt
 import argparse
 import torch
+import imageio
+import numpy as np
+import os
 
 emo_label = ['ang',  'con',  'dis',  'fea',  'hap',  'neu',  'sad',  'sur']
 emo_label_full = ['angry',  'contempt',  'disgusted',
@@ -29,11 +32,23 @@ def test_emo_prompt(emotype: str):
     s_trg = prompt({'z_trg': z_trg, 'y_trg': y_trg})
     print(s_trg.shape)
 
+def test_mimsave(video_path, predictions_gen):
+    '''
+    predictions_gen: list(np.array((num_frames, 256, 256, 3), dtype=np.uint8))
+    '''
+    imageio.mimsave(video_path, predictions_gen, fps=25.0)
+    os.remove(video_path)
+
 def main():
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('--emotype', type=str, default='neu')
+    # argparser.add_argument('--emotype', type=str, default='neu')
+    # args = argparser.parse_args()
+    # test_emo_mapper(args.emotype)
+    argparser.add_argument('--intensity', type=float, default=None)
     args = argparser.parse_args()
-    test_emo_mapper(args.emotype)
+    
+    print(args.intensity)
+    test_mimsave(f'test{args.intensity}.mp4', np.random.randint(255,size=(12,256,256,3), dtype=np.uint8))
 
 if __name__ == '__main__':
     main()

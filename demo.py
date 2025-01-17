@@ -609,8 +609,9 @@ def test_one(ckpt, emotype, file: str, cropped=False, save_dir=" ", intensity=No
             os.makedirs(os.path.join(log_dir, "temp"), exist_ok=True)
 
             f_name = os.path.basename(
-                img_path[:-4]) + "_" + emotype + "_" + os.path.basename(latent_path_driving)[:-4] + f'{intensity:.3f if intensity is not None else ""}' + ".mp4"
+                img_path[:-4]) + "_" + emotype + "_" + os.path.basename(latent_path_driving)[:-4] + (f'_int{intensity:.3f}'.replace('.','') if intensity is not None else "") + ".mp4"
             video_path = os.path.join(log_dir, "temp", f_name)
+
             imageio.mimsave(video_path, predictions_gen, fps=25.0)
 
             save_video = os.path.join(log_dir, f_name)
