@@ -506,7 +506,7 @@ def test_one(ckpt, emotype, file: str, cropped=False, save_dir=" ", intensity=No
                                 'roll': torch.from_numpy(he_driving['roll']).to(DEVICE).unsqueeze(0),
                                 't': torch.from_numpy(he_driving['t']).to(DEVICE).unsqueeze(0),
                                 }
-            x['intensity'] = None
+            x['intensity'] = intensity
 
             # emotion prompt
             emoprompt, deepprompt = emotionprompt(x)
