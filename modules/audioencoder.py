@@ -6,7 +6,6 @@ import math
 
 from cv2 import dct
 
-from munch import Munch
 import numpy as np
 import torch
 import torch.nn as nn
