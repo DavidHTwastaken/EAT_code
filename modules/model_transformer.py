@@ -28,8 +28,10 @@ data_transforms_clip = transforms.Compose([
 from modules.bilinear import crop_bbox_batch
 from modules.syncnet import SyncNet_color as SyncNet
 
-import clip
-
+try:
+    import clip
+except:
+    print('CLIP package not installed')
 class Vgg19(torch.nn.Module):
     """
     Vgg19 network for perceptual loss.
