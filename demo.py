@@ -121,7 +121,6 @@ def prepare_test_data(img_path, audio_path, opt, emotype, use_otherimg=True):
     deepfeature = np.load(f'{root_wav}/deepfeature32/{asp}.npy')
     driving_latent = np.load(latent_path_driving[:-4]+'.npy', allow_pickle=True)
     he_driving = driving_latent[1]
-
     # gt frame number
     frames = glob.glob(f'{root_wav}/images_evp_25/cropped/*.jpg')
     num_frames = len(frames)
@@ -512,7 +511,7 @@ def test_one(ckpt, emotype, file: str, cropped=False, save_dir=" ", intensity=No
             x['intensity'] = intensity
 
             # emotion prompt
-            emoprompt, deepprompt = emotionprompt(x)
+            emoprompt, deepprompt = emotionprompt(x) # uses z_trg and y_trg from x
             a2kp_exps = []
             emo_exps = []
             T = 5 # comes from config (num_w in audio2kp_params)
@@ -537,6 +536,7 @@ def test_one(ckpt, emotype, file: str, cropped=False, save_dir=" ", intensity=No
                     a2kp_exps.append(he_driving_emo_xi['emo'])
                     emo_exps.append(emo_exp)
             elif T is not None:
+                # Everything gets processed in groups of size T
                 for i in range(x['mel'].shape[1]//T+1): # loop based on length of audio
                     if i*T >= x['mel'].shape[1]:
                         break
@@ -545,7 +545,7 @@ def test_one(ckpt, emotype, file: str, cropped=False, save_dir=" ", intensity=No
                     xi['z_trg'] = x['z_trg']
                     xi['y_trg'] = x['y_trg']
                     xi['pose'] = x['pose'][i*T:(i+1)*T, :, :, :, :]
-                    xi['deep'] = x['deep'][:, i*T:(i+1)*T, :, :, :]
+                    xi['deep'] = x['deep'][:, i*T:(i+1)*T, :, :, :] # ([1, num_frames, 11, 16, 29])
                     xi['he_driving'] = {'yaw': x['he_driving']['yaw'][:, i*T:(i+1)*T, :],
                                         'pitch': x['he_driving']['pitch'][:, i*T:(i+1)*T, :],
                                         'roll': x['he_driving']['roll'][:, i*T:(i+1)*T, :],

@@ -39,16 +39,36 @@ def test_mimsave(video_path, predictions_gen):
     imageio.mimsave(video_path, predictions_gen, fps=25.0)
     os.remove(video_path)
 
+def test_latent_extractor():
+    import glob
+    from preprocess.latent_extractor import resize
+    lat = 'preprocess/latents/self_vid.npy'
+    kp_cano, he_driving = np.load(lat, allow_pickle=True)
+    print(he_driving['yaw'].shape)
+
+    videoname = 'preprocess/imgs/self_vid'
+    path_frames = glob.glob(videoname+'/*.jpg')
+    path_frames.sort()
+    driving_frames = []
+    for im in path_frames:
+        driving_frames.append(imageio.imread(im))
+    driving_video = [resize(frame, (256, 256))[..., :3] for frame in driving_frames]
+
+    driving = torch.tensor(np.array(driving_video)[np.newaxis].astype(
+        np.float32)).permute(0, 4, 1, 2, 3)
+    print(driving.shape)
+
 def main():
-    argparser = argparse.ArgumentParser()
-    # argparser.add_argument('--emotype', type=str, default='neu')
+    # argparser = argparse.ArgumentParser()
+    # # argparser.add_argument('--emotype', type=str, default='neu')
+    # # args = argparser.parse_args()
+    # # test_emo_mapper(args.emotype)
+    # argparser.add_argument('--intensity', type=float, default=None)
     # args = argparser.parse_args()
-    # test_emo_mapper(args.emotype)
-    argparser.add_argument('--intensity', type=float, default=None)
-    args = argparser.parse_args()
     
-    print(args.intensity)
-    test_mimsave(f'test{args.intensity}.mp4', np.random.randint(255,size=(12,256,256,3), dtype=np.uint8))
+    # print(args.intensity)
+    # test_mimsave(f'test{args.intensity}.mp4', np.random.randint(255,size=(12,256,256,3), dtype=np.uint8))
+    test_latent_extractor()
 
 if __name__ == '__main__':
     main()

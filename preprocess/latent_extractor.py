@@ -61,6 +61,7 @@ def estimate_latent(driving_video, kp_detector, he_estimator):
         kp_canonical = kp_detector(driving[:, :, 0])
         he_drivings = {'yaw': [], 'pitch': [], 'roll': [], 't': [], 'exp': []}
 
+        # for each frame of the driving video
         for frame_idx in range(driving.shape[2]):
             driving_frame = driving[:, :, frame_idx]
             he_driving = he_estimator(driving_frame)

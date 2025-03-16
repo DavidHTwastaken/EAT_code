@@ -187,7 +187,7 @@ def load_ckpt(ckpt, kp_detector, generator, audio2kptransformer):
         kp_detector.load_state_dict(checkpoint['kp_detector'])
 
 gt_i = [5,6,7,8]
-def test_mead(ckpt, part=0, save_dir=" "):
+def test_lrw(ckpt, part=0, save_dir=" "):
     with open("config/deepprompt_eam3d_st_tanh_304_3090_all.yaml") as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
     # temp_audio = audio_path
@@ -336,6 +336,7 @@ if __name__ == '__main__':
     argparser.add_argument("--part", default=0, type=int, help="part wavs")
     argparser.add_argument("--name", type=str, default=" ", help="path of the output video")
     argparser.add_argument("--mode", type=int, default=0, help="test mode 0: a ckpt 1: a ckpt file")
+    argparser.add_argument("--root_lrw", type=str, default="/data2/gy/lrw", help="path of lrw")
     args = argparser.parse_args()
 
     # name = 'vt2mel25_2_vox_head_587'
@@ -343,13 +344,13 @@ if __name__ == '__main__':
     # name = 'qvt_528'
     # name = 'qvt_img_538'
     name = 'a2kp_posedeep_img_synconly_mead_479'
-
+    root_lrw = args.root_lrw
 
     if len (args.name) > 1:
         name = args.name
         print(name)
     if args.mode == 0:
-        test_mead(f'./ckpt/{name}.pth.tar', args.part, save_dir=f'./result_lrw/{name}_lrw_norm/')
+        test_lrw(f'./ckpt/{name}.pth.tar', args.part, save_dir=f'./result_lrw/{name}_lrw_norm/')
     elif args.mode == 1:
         ckpt_paths = glob.glob(f'../ost/output/{name}/*.pth.tar')
         ckpt_paths.sort()
@@ -361,5 +362,5 @@ if __name__ == '__main__':
                 savefile = nsp[0]+'_'+nsp[1][:8]
                 # ckpt = ckpt.replace(' ', '\\ ')
                 print(f'./{savefile}_{epoch}/')
-                test_mead(f'./{ckpt}', args.part, save_dir=f'./result_lrw/{savefile}_{epoch}_lrw_norm_25k_1202/')
+                test_lrw(f'./{ckpt}', args.part, save_dir=f'./result_lrw/{savefile}_{epoch}_lrw_norm_25k_1202/')
         

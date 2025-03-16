@@ -18,7 +18,7 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 down_pose = AntiAliasInterpolation2d(1,0.25).to(DEVICE)
 
 def headpose_pred_to_degree(pred):
-    # pred is np.array(136, 66)
+    # pred is np.array(num_frames, 66)
     pred = torch.from_numpy(pred).to(DEVICE)
     device = pred.device
     idx_tensor = [idx for idx in range(66)]
@@ -136,8 +136,8 @@ def main(args):
             except:
                 print(outpath)
         kp_cano, he_driving = np.load(lat, allow_pickle=True)
-        # he_driving = {'yaw': np.array(136,66), 'pitch': np.array(136,66), 
-        # 'roll': np.array(136,66), 't': np.array(136,3), 'exp': np.array(136, 45)}
+        # he_driving = {'yaw': np.array(num_frames,66), 'pitch': np.array(num_frames,66), 
+        # 'roll': np.array(num_frames,66), 't': np.array(num_frames,3), 'exp': np.array(num_frames, 3*num_keypoints)}
         poseimgs = get_pose_img(he_driving)
         f = gzip.GzipFile(f'{outpath}', "w")
         np.save(file=f, arr=poseimgs.cpu().numpy())

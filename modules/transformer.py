@@ -487,6 +487,7 @@ def get_rotation_matrix(yaw, pitch, roll):
     roll = roll.unsqueeze(1)
     pitch = pitch.unsqueeze(1)
     yaw = yaw.unsqueeze(1)
+    # Now all tensors are ([5, 1])
 
     pitch_mat = torch.cat([torch.ones_like(pitch), torch.zeros_like(pitch), torch.zeros_like(pitch), 
                           torch.zeros_like(pitch), torch.cos(pitch), -torch.sin(pitch),
@@ -593,9 +594,7 @@ class Audio2kpTransformerBBoxQDeep(nn.Module):
         F0_model.load_state_dict(params)
         self.f0_model = F0_model
 
-    def rotation_and_translation(self, headpose, bbs, bs):
-        # print(headpose['roll'].shape, headpose['yaw'].shape, headpose['pitch'].shape, headpose['t'].shape)
-        
+    def rotation_and_translation(self, headpose, bbs, bs):        
         yaw = headpose_pred_to_degree(headpose['yaw'].reshape(bbs*bs, -1))
         pitch = headpose_pred_to_degree(headpose['pitch'].reshape(bbs*bs, -1))
         roll = headpose_pred_to_degree(headpose['roll'].reshape(bbs*bs, -1))
@@ -689,6 +688,7 @@ class Audio2kpTransformerBBoxQDeep(nn.Module):
 
 
 class Audio2kpTransformerBBoxQDeepPrompt(nn.Module):
+    # This model is used in the demo code
     def __init__(self, embedding_dim, num_kp, num_w, face_ea=False):
         super(Audio2kpTransformerBBoxQDeepPrompt, self).__init__()
         self.embedding_dim = embedding_dim
@@ -760,16 +760,19 @@ class Audio2kpTransformerBBoxQDeepPrompt(nn.Module):
         self.f0_model = F0_model
 
     def rotation_and_translation(self, headpose, bbs, bs):
+        # print(headpose['roll'].shape, headpose['yaw'].shape,
+        #       headpose['pitch'].shape, headpose['t'].shape)
         yaw = headpose_pred_to_degree(headpose['yaw'].reshape(bbs*bs, -1))
         pitch = headpose_pred_to_degree(headpose['pitch'].reshape(bbs*bs, -1))
         roll = headpose_pred_to_degree(headpose['roll'].reshape(bbs*bs, -1))
+        # print(f'yaw: {yaw}, pitch: {pitch}, roll: {roll}')
         yaw_2, pitch_2, roll_2, yaw_v, pitch_v, roll_v, rot_v = get_rotation_matrix(yaw, pitch, roll)
         t = headpose['t'].reshape(bbs*bs, -1)
         hp = torch.cat([yaw.unsqueeze(1), pitch.unsqueeze(1), roll.unsqueeze(1), yaw_2, pitch_2, roll_2, yaw_v, pitch_v, roll_v, rot_v, t], dim=1)
         return hp
 
     def forward(self, x, initial_kp = None, return_strg=False, emoprompt=None, deepprompt=None, hp=None, side=False):
-        bbs, bs, seqlen, _, _ = x['deep'].shape
+        bbs, bs, seqlen, _, _ = x['deep'].shape # deep shape is ([1, T, 11, 16, 29])
         # ph = x["pho"].reshape(bbs*bs*seqlen, 1)
         if hp is None:
             hp = self.rotation_and_translation(x['he_driving'], bbs, bs)
