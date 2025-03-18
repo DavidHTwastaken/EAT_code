@@ -42,21 +42,21 @@ def test_mimsave(video_path, predictions_gen):
 def test_latent_extractor():
     import glob
     from preprocess.latent_extractor import resize
-    lat = 'preprocess/latents/self_vid.npy'
+    lat = 'preprocess/latents/head_movements.npy'
     kp_cano, he_driving = np.load(lat, allow_pickle=True)
-    print(he_driving['yaw'].shape)
+    print('yaw', he_driving['yaw'])
+    print('translation',he_driving['t'])
+    # videoname = 'preprocess/imgs/self_vid'
+    # path_frames = glob.glob(videoname+'/*.jpg')
+    # path_frames.sort()
+    # driving_frames = []
+    # for im in path_frames:
+    #     driving_frames.append(imageio.imread(im))
+    # driving_video = [resize(frame, (256, 256))[..., :3] for frame in driving_frames]
 
-    videoname = 'preprocess/imgs/self_vid'
-    path_frames = glob.glob(videoname+'/*.jpg')
-    path_frames.sort()
-    driving_frames = []
-    for im in path_frames:
-        driving_frames.append(imageio.imread(im))
-    driving_video = [resize(frame, (256, 256))[..., :3] for frame in driving_frames]
-
-    driving = torch.tensor(np.array(driving_video)[np.newaxis].astype(
-        np.float32)).permute(0, 4, 1, 2, 3)
-    print(driving.shape)
+    # driving = torch.tensor(np.array(driving_video)[np.newaxis].astype(
+    #     np.float32)).permute(0, 4, 1, 2, 3)
+    # print(driving.shape)
 
 def main():
     # argparser = argparse.ArgumentParser()

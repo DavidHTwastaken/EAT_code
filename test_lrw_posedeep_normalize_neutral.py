@@ -42,7 +42,7 @@ mean, std = -4, 4
 expU = torch.from_numpy(np.load('./expPCAnorm_fin/U_mead.npy')[:,:32])
 expmean = torch.from_numpy(np.load('./expPCAnorm_fin/mean_mead.npy'))
 
-root_lrw = '/data2/gy/lrw'
+root_lrw = './lrw'
 
 # def normalize_kp(kp_source, kp_driving, kp_driving_initial,
 #                  use_relative_movement=True, use_relative_jacobian=True):
@@ -324,7 +324,16 @@ def test_lrw(ckpt, part=0, save_dir=" "):
     print('mean loss_latents', np.mean(loss_latents))
     print('mean loss_pca_emos', np.mean(loss_pca_emos))
     print('mean loss_y ', np.mean(loss_y))
-
+    if part == 0:
+        with open(f'{save_dir}/loss.txt', 'w') as f:
+            f.write(f'Part 0: mean loss_latents {np.mean(loss_latents)}\n')
+            f.write(f'Part 0: mean loss_pca_emos {np.mean(loss_pca_emos)}\n')
+            f.write(f'Part 0: mean loss_y {np.mean(loss_y)}\n')
+    else:
+        with open(f'{save_dir}/loss.txt', 'a') as f:
+            f.write(f'Part {part}: mean loss_latents {np.mean(loss_latents)}\n')
+            f.write(f'Part {part}: mean loss_pca_emos {np.mean(loss_pca_emos)}\n')
+            f.write(f'Part {part}: mean loss_y {np.mean(loss_y)}\n')
 
 
 
