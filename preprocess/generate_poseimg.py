@@ -81,7 +81,7 @@ def draw_annotation_box( image, rotation_vector, translation_vector, color=(255,
     point_3d.append((front_size, front_size, front_depth))
     point_3d.append((front_size, -front_size, front_depth))
     point_3d.append((-front_size, -front_size, front_depth))
-    point_3d = np.array(point_3d, dtype=np.float).reshape(-1, 3)
+    point_3d = np.array(point_3d, dtype=float).reshape(-1, 3)
 
     # Map to 2d image points
     (point_2d, _) = cv2.projectPoints(point_3d,

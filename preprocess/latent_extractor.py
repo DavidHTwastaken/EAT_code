@@ -76,18 +76,26 @@ if __name__ == "__main__":
     parser.add_argument("--gen", default="spade", choices=["original", "spade"])
     parser.add_argument("--adapt_scale", dest="adapt_scale", action="store_true", help="adapt movement scale based on convex hull of keypoints")
     parser.add_argument("--part", default=0, type=int, help="part emotion")
+    parser.add_argument("--dir", default=None, type=str, help="specific video directory for imgs")
+    parser.add_argument("--num_frames", default=None, type=int, help="number of frames to process")
 
     opt = parser.parse_args()
     part = opt.part
-    trainlist = glob.glob('./imgs/*')
-    trainlist.sort()
+    if opt.dir is not None:
+        trainlist = [os.path.join('./imgs', opt.dir)]
+    else:
+        trainlist = glob.glob('./imgs/*')
+        trainlist.sort()
     kp_detector, he_estimator = load_checkpoints(config_path=opt.config, checkpoint_path=opt.checkpoint, cpu=torch.cuda.is_available()==False)
     if not os.path.exists('./latents/'):
         os.makedirs('./latents')
     #     os.makedirs('./output/latent_evp/test/')
     #for videoname in tqdm(trainlist[part*2850 : (part+1)*2850]):
     for videoname in tqdm(trainlist):
-        path_frames = glob.glob(videoname+'/*.jpg')
+        if opt.num_frames is not None:
+            path_frames = glob.glob(videoname+'/*.jpg')[:opt.num_frames]
+        else:
+            path_frames = glob.glob(videoname+'/*.jpg')
         path_frames.sort()
         driving_frames = []
         for im in path_frames:
@@ -98,5 +106,6 @@ if __name__ == "__main__":
         kc = kc['value'].cpu().numpy()
         for k in he:
             he[k] = torch.cat(he[k]).cpu().numpy()
-        np.save('./latents/'+os.path.basename(videoname), [kc, he])
+        np.array([kc, he], dtype=object)
+        np.save('./latents/'+os.path.basename(videoname))
     print('=============done==============')

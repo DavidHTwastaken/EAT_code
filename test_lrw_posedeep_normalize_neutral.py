@@ -59,6 +59,11 @@ root_lrw = './lrw'
 
 #     return kp_new
 
+if torch.cuda.is_available():
+    DEVICE = f"cuda:{torch.cuda.current_device()}"  # Uses first available GPU
+else:
+    DEVICE = "cpu"
+
 def _load_tensor(data):
     wave_path = data
     wave, sr = sf.read(wave_path)
@@ -107,7 +112,7 @@ def prepare_test_data(img_path, audio_path, opt):
     # isp = img_path.split('/')
     he_source = {}
     for k in source_latent[1].keys():
-        he_source[k] = torch.from_numpy(source_latent[1][k][0]).unsqueeze(0).cuda()
+        he_source[k] = torch.from_numpy(source_latent[1][k][0]).unsqueeze(0).to(DEVICE)
     
     # source images
     source_img = img_as_float32(io.imread(img_path)).transpose((2, 0, 1))
@@ -229,21 +234,21 @@ def test_lrw(ckpt, part=0, save_dir=" "):
 
 
         with torch.no_grad():
-            source_img = torch.from_numpy(source_img).unsqueeze(0).cuda()
+            source_img = torch.from_numpy(source_img).unsqueeze(0).to(DEVICE)
             kp_canonical = kp_detector(source_img, with_feature=True)     # {'value': value, 'jacobian': jacobian}   
             kp_cano = kp_canonical['value']
 
             x = {}
-            # x['pho'] = ph_frames.unsqueeze(0).cuda()
-            x['mel'] = audio_frames.unsqueeze(1).unsqueeze(0).cuda()
-            x['z_trg'] = z_trg.unsqueeze(0).cuda()
-            x['y_trg'] = torch.tensor(y_trg, dtype=torch.long).cuda().reshape(1)
-            x['pose'] = poseimgs.cuda()
-            x['deep'] = deep_feature.cuda().unsqueeze(0)
-            x['he_driving'] = {'yaw': torch.from_numpy(he_driving['yaw']).cuda().unsqueeze(0), 
-                            'pitch': torch.from_numpy(he_driving['pitch']).cuda().unsqueeze(0), 
-                            'roll': torch.from_numpy(he_driving['roll']).cuda().unsqueeze(0), 
-                            't': torch.from_numpy(he_driving['t']).cuda().unsqueeze(0), 
+            # x['pho'] = ph_frames.unsqueeze(0).to(DEVICE)
+            x['mel'] = audio_frames.unsqueeze(1).unsqueeze(0).to(DEVICE)
+            x['z_trg'] = z_trg.unsqueeze(0).to(DEVICE)
+            x['y_trg'] = torch.tensor(y_trg, dtype=torch.long).to(DEVICE).reshape(1)
+            x['pose'] = poseimgs.to(DEVICE)
+            x['deep'] = deep_feature.to(DEVICE).unsqueeze(0)
+            x['he_driving'] = {'yaw': torch.from_numpy(he_driving['yaw']).to(DEVICE).unsqueeze(0), 
+                            'pitch': torch.from_numpy(he_driving['pitch']).to(DEVICE).unsqueeze(0), 
+                            'roll': torch.from_numpy(he_driving['roll']).to(DEVICE).unsqueeze(0), 
+                            't': torch.from_numpy(he_driving['t']).to(DEVICE).unsqueeze(0), 
                             }
             ### emotion prompt
             emoprompt, deepprompt = emotionprompt(x)
@@ -261,13 +266,13 @@ def test_lrw(ckpt, part=0, save_dir=" "):
             exp = exp * source_area
 
             # print(he_driving['yaw'].shape) # len 66
-            he_new_driving = {'yaw': torch.from_numpy(he_driving['yaw']).cuda(), 
-                            'pitch': torch.from_numpy(he_driving['pitch']).cuda(), 
-                            'roll': torch.from_numpy(he_driving['roll']).cuda(), 
-                            't': torch.from_numpy(he_driving['t']).cuda(), 
-                            #   'exp': torch.from_numpy(he_driving['exp']).cuda()}
+            he_new_driving = {'yaw': torch.from_numpy(he_driving['yaw']).to(DEVICE), 
+                            'pitch': torch.from_numpy(he_driving['pitch']).to(DEVICE), 
+                            'roll': torch.from_numpy(he_driving['roll']).to(DEVICE), 
+                            't': torch.from_numpy(he_driving['t']).to(DEVICE), 
+                            #   'exp': torch.from_numpy(he_driving['exp']).to(DEVICE)}
                             'exp': exp}
-            he_driving['exp'] = torch.from_numpy(he_driving['exp']).cuda()
+            he_driving['exp'] = torch.from_numpy(he_driving['exp']).to(DEVICE)
             # print(he_new_driving['exp'][:, 0])
             loss_latent = F.mse_loss(he_new_driving['exp'], he_driving['exp'])
             pca_exp = torch.mm(he_driving['exp'].squeeze(0)/source_area - expmean.expand_as(he_driving['exp'].squeeze(0)).to(device), expU.to(device))
